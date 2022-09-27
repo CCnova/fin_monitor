@@ -1,22 +1,9 @@
-import { PrismaClient } from "@prisma/client";
 import express from "express";
+import userRouter from "./User/router";
 
 const app = express();
 const PORT = 3000;
 
-const prisma = new PrismaClient();
+app.use("/api/v1/user", userRouter);
 
-async function main() {
-  const allUsers = await prisma.user.findMany();
-  console.log(allUsers);
-}
-
-main()
-  .then(() => prisma.$disconnect())
-  .catch((e) => {
-    console.error(e);
-
-    return prisma.$disconnect();
-  });
-
-// app.listen(PORT, () => console.log(`Listen to port ${PORT}`));
+app.listen(PORT, () => console.log(`Listen to port ${PORT}`));
