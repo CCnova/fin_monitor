@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import {
+  IDelUserRequestParams,
+  IDelUserResponseBody,
   IFailResponseBody,
   IGetUserRequestParams,
   IGetUserResponseBody,
@@ -12,6 +14,7 @@ import {
 } from "./types";
 import {
   createUserUseCase,
+  deleteUserUseCase,
   getUserUseCase,
   listUsersUseCase,
   updateUserUseCase,
@@ -62,5 +65,17 @@ export function updateUser(
     .then((id) => res.status(200).send({ id }))
     .catch((error) =>
       res.status(500).send({ error, message: "Internal Server Error" })
+    );
+}
+
+export function deleteUser(
+  req: Request<IDelUserRequestParams>,
+  res: Response<IDelUserResponseBody | IFailResponseBody>
+) {
+  return deleteUserUseCase
+    .execute(req.params)
+    .then((id) => res.status(200).send({ id }))
+    .catch((error) =>
+      res.status(500).send({ error, message: "Internal server error" })
     );
 }

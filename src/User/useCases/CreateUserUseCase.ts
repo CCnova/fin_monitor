@@ -1,35 +1,56 @@
-import { PrismaClient } from "@prisma/client";
-import { UseCase } from "../../types";
-import { isLongerThan } from "../../utils";
-import { IPostUserRequestBody } from "../types";
+import { User } from "@prisma/client";
+import { IUseCaseFailPayload, UseCase, UseCaseResponseKind } from "../../types";
+import {
+  isLongerThan,
+  isOfType,
+  isTruthy,
+  runValidations,
+  ValidationFunction,
+} from "../../utils";
+import { IPostUserRequestBody, UserCreator } from "../types";
 
-function validateParams(params: IPostUserRequestBody): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!isLongerThan(params.password, 6)) {
-      reject(
-        new Error(
-          `Password must have length bigger than 6, received: ${params.password}`
-        )
-      );
-    }
-
-    resolve();
-  });
+interface ICreateUserUseCasePayload {
+  id: number;
 }
 
+const isValidPassword: ValidationFunction<IPostUserRequestBody> = (
+  params,
+  validAction,
+  notValidAction
+) => {
+  if (!isTruthy(params.password) || !isLongerThan(params.password!, 6))
+    notValidAction(new Error(`password must be longer than 6 characters`));
+  validAction();
+};
+
+const validations = [isValidPassword];
+
+const validateParams = (params: IPostUserRequestBody): Promise<unknown[]> => {
+  return runValidations(params, validations);
+};
+
+const pipeToResponse = (
+  kind: UseCaseResponseKind,
+  payloadData: User | Error
+) => ({
+  kind,
+  payload: isOfType<User>(payloadData)
+    ? { id: payloadData.id }
+    : { error: payloadData, message: payloadData.message },
+});
+
 export default function generator(
-  databaseClient: PrismaClient
-): UseCase<number, IPostUserRequestBody> {
+  createUser: UserCreator
+): UseCase<
+  ICreateUserUseCasePayload | IUseCaseFailPayload,
+  IPostUserRequestBody
+> {
   return {
     execute: (params) => {
       return validateParams(params)
-        .then(() => databaseClient.user.create({ data: params }))
-        .then((newUser) => newUser.id)
-        .catch((error) => {
-          console.log(`Failed to create user, data: ${params}`);
-
-          throw error;
-        });
+        .then(() => createUser(params))
+        .then((user) => pipeToResponse(UseCaseResponseKind.SUCESS, user))
+        .catch((error) => pipeToResponse(UseCaseResponseKind.FAIL, error));
     },
   };
 }

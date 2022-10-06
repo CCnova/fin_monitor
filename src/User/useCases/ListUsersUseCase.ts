@@ -1,16 +1,14 @@
-import { PrismaClient, User } from "@prisma/client";
-import { UseCase } from "../../types";
+import { User } from "@prisma/client";
+import { UseCase, UseCaseResponseKind } from "../../types";
+import { UserLister } from "../types";
 
-export default function generator(
-  databaseClient: PrismaClient
-): UseCase<User[]> {
+const formatToResponse = (users: User[]) => ({
+  kind: UseCaseResponseKind.SUCESS,
+  payload: users,
+});
+
+export default function generator(listUsers: UserLister): UseCase<User[]> {
   return {
-    execute: (): Promise<User[]> => {
-      return databaseClient.user.findMany().catch((error) => {
-        console.log("Failed to list users!");
-
-        throw error;
-      });
-    },
+    execute: () => listUsers().then(formatToResponse),
   };
 }

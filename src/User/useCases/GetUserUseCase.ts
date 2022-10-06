@@ -1,38 +1,58 @@
-import { PrismaClient, User } from "@prisma/client";
-import { UseCase } from "../../types";
-import { isNumber } from "../../utils";
-import { IGetUserRequestParams } from "../types";
+import { User } from "@prisma/client";
+import { IUseCaseFailPayload, UseCase, UseCaseResponseKind } from "../../types";
+import {
+  isNumber,
+  isOfType,
+  runValidations,
+  ValidationFunction,
+} from "../../utils";
+import { IGetUserRequestParams, UserFetcher } from "../types";
 
-function validateParams(params: IGetUserRequestParams): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!isNumber(params.id)) {
-      reject(
-        new Error(`userId must be a valid number. Received: ${params.id}`)
-      );
-    }
-    resolve();
-  });
-}
+const isValidId: ValidationFunction<IGetUserRequestParams> = (
+  params,
+  validAction,
+  notValidAction
+) => {
+  if (!isNumber(params.id))
+    notValidAction(
+      new Error(`id must be a valid number. Received: ${params.id}`)
+    );
+  validAction();
+};
+
+const validations = [isValidId];
+
+const validateParams = (params: IGetUserRequestParams): Promise<unknown[]> => {
+  return runValidations(params, validations);
+};
+
+const generatePayload = (data: User | Error | null) => {
+  if (isOfType<Error>(data)) return { error: data, message: data.message };
+
+  return data;
+};
+
+const pipeToResponse = (
+  kind: UseCaseResponseKind,
+  payloadData: User | null | Error
+) => ({
+  kind,
+  payload: generatePayload(payloadData),
+});
 
 export default function generator(
-  databaseClient: PrismaClient
-): UseCase<User | null, IGetUserRequestParams> {
+  fetchUser: UserFetcher
+): UseCase<User | null | IUseCaseFailPayload, IGetUserRequestParams> {
   return {
-    execute: (params): Promise<User | null> => {
-      return validateParams(params)
-        .then(() =>
-          databaseClient.user.findUnique({ where: { id: Number(params.id) } })
+    execute: (params) =>
+      validateParams(params)
+        .then(() => fetchUser(Number(params.id)))
+        .then((user) =>
+          pipeToResponse(
+            user ? UseCaseResponseKind.SUCESS : UseCaseResponseKind.NOT_FOUND,
+            user
+          )
         )
-        .then((user) => {
-          if (!user) console.log("No user with this id was found");
-
-          return user;
-        })
-        .catch((error) => {
-          console.log("Failed to get user!");
-
-          throw error;
-        });
-    },
+        .catch((error) => pipeToResponse(UseCaseResponseKind.FAIL, error)),
   };
 }

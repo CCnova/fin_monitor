@@ -1,52 +1,75 @@
-import { PrismaClient } from "@prisma/client";
-import { UseCase } from "../../types";
-import { isLongerThan, isNumber, isTruthy } from "../../utils";
-import { IPutUserRequestBody, IPutUserRequestParams } from "../types";
+import { User } from "@prisma/client";
+import { IUseCaseFailPayload, UseCase, UseCaseResponseKind } from "../../types";
+import {
+  isLongerThan,
+  isNumber,
+  isOfType,
+  isTruthy,
+  runValidations,
+  ValidationFunction,
+} from "../../utils";
+import {
+  IPutUserRequestBody,
+  IPutUserRequestParams,
+  UserUpdater,
+} from "../types";
 
-function validateParams(
-  params: IPutUserRequestBody & IPutUserRequestParams
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!isNumber(params.id)) {
-      reject(
-        new Error(`userId must be a valid number. Received: ${params.id}`)
-      );
-    }
-
-    if (isTruthy(params.password) && !isLongerThan(params.password!, 6)) {
-      reject(
-        new Error(
-          `Password must have length bigger than 6, received: ${params.password}`
-        )
-      );
-    }
-
-    resolve();
-  });
+interface IUpdateUserUseCasePayload {
+  id: number;
 }
 
-export default function generator(
-  databaseClient: PrismaClient
-): UseCase<number, IPutUserRequestBody & IPutUserRequestParams> {
-  return {
-    execute: (params) => {
-      return validateParams(params)
-        .then(() =>
-          databaseClient.user.update({
-            where: { id: Number(params.id) },
-            data: {
-              email: params.email,
-              name: params.name,
-              password: params.password,
-            },
-          })
-        )
-        .then((user) => user.id)
-        .catch((error) => {
-          console.log("Failed to update user!");
+const validateId: ValidationFunction<
+  IPutUserRequestBody & IPutUserRequestParams
+> = (params, validAction, notValidAction) => {
+  if (!isNumber(params.id!))
+    notValidAction(
+      new Error(`userId must be a valid number. Received: ${params.id}`)
+    );
+  validAction();
+};
 
-          throw error;
-        });
-    },
+const validatePassword: ValidationFunction<
+  IPutUserRequestBody & IPutUserRequestParams
+> = (params, validAction, notValidAction) => {
+  if (isTruthy(params.password) && !isLongerThan(params.password!, 6)) {
+    notValidAction(
+      new Error(
+        `Password must have length bigger than 6, received: ${params.password}`
+      )
+    );
+  }
+  validAction();
+};
+
+const validations = [validateId, validatePassword];
+
+const validateParams = (
+  params: IPutUserRequestBody & IPutUserRequestParams
+): Promise<unknown[]> => {
+  return runValidations(params, validations);
+};
+
+const formatToResponse = (
+  kind: UseCaseResponseKind,
+  payloadData: User | Error
+) => ({
+  kind,
+  payload: isOfType<User>(payloadData)
+    ? payloadData
+    : { error: payloadData, message: payloadData.message },
+});
+
+export default function generator(
+  updateUser: UserUpdater
+): UseCase<
+  IUpdateUserUseCasePayload | IUseCaseFailPayload,
+  IPutUserRequestBody & IPutUserRequestParams
+> {
+  return {
+    execute: (params) =>
+      validateParams(params)
+        .then(() => updateUser(params))
+        .then((user) => formatToResponse(UseCaseResponseKind.SUCESS, user))
+        .catch((error) => formatToResponse(UseCaseResponseKind.FAIL, error)),
   };
 }
