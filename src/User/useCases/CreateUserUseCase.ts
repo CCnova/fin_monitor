@@ -9,10 +9,6 @@ import {
 } from "../../utils";
 import { IPostUserRequestBody, UserCreator } from "../types";
 
-interface ICreateUserUseCasePayload {
-  id: number;
-}
-
 const isValidPassword: ValidationFunction<IPostUserRequestBody> = (
   params,
   validAction,
@@ -25,7 +21,7 @@ const isValidPassword: ValidationFunction<IPostUserRequestBody> = (
 
 const validations = [isValidPassword];
 
-const validateParams = (params: IPostUserRequestBody): Promise<unknown[]> => {
+const validateParams = (params: IPostUserRequestBody) => {
   return runValidations(params, validations);
 };
 
@@ -35,16 +31,13 @@ const pipeToResponse = (
 ) => ({
   kind,
   payload: isOfType<User>(payloadData)
-    ? { id: payloadData.id }
+    ? payloadData.id
     : { error: payloadData, message: payloadData.message },
 });
 
 export default function generator(
   createUser: UserCreator
-): UseCase<
-  ICreateUserUseCasePayload | IUseCaseFailPayload,
-  IPostUserRequestBody
-> {
+): UseCase<number | IUseCaseFailPayload, IPostUserRequestBody> {
   return {
     execute: (params) => {
       return validateParams(params)

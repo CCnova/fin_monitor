@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
+import { IUseCaseFailPayload, UseCaseResponseKind } from "../types";
 import {
   IDelUserRequestParams,
   IDelUserResponseBody,
-  IFailResponseBody,
   IGetUserRequestParams,
   IGetUserResponseBody,
   IListUsersResponseBody,
@@ -22,60 +22,88 @@ import {
 
 export function listUsers(
   req: Request,
-  res: Response<IListUsersResponseBody | IFailResponseBody>
+  res: Response<IListUsersResponseBody | IUseCaseFailPayload>
 ) {
   return listUsersUseCase
     .execute()
-    .then((users) => res.status(200).send({ users }))
-    .catch((error) =>
-      res.status(500).send({ error, message: "Internal Server Error" })
+    .then((useCaseResponse) =>
+      useCaseResponse.kind === UseCaseResponseKind.SUCESS
+        ? res
+            .status(200)
+            .send({
+              users: useCaseResponse.payload as IListUsersResponseBody["users"],
+            })
+        : res.status(500).send(useCaseResponse.payload as IUseCaseFailPayload)
     );
 }
 
 export function getUser(
   req: Request<IGetUserRequestParams>,
-  res: Response<IGetUserResponseBody | IFailResponseBody>
+  res: Response<IGetUserResponseBody | IUseCaseFailPayload>
 ) {
-  return getUserUseCase
-    .execute(req.params)
-    .then((user) => res.status(200).send({ user }))
-    .catch((error) =>
-      res.status(500).send({ error, message: "Internal Server Error" })
-    );
+  return getUserUseCase.execute(req.params).then((useCaseResponse) => {
+    switch (useCaseResponse.kind) {
+      case UseCaseResponseKind.SUCESS:
+        return res
+          .status(200)
+          .send({
+            user: useCaseResponse.payload as IGetUserResponseBody["user"],
+          });
+      case UseCaseResponseKind.NOT_FOUND:
+        return res.status(200).send({ user: null });
+      case UseCaseResponseKind.FAIL:
+        return res
+          .status(500)
+          .send(useCaseResponse.payload as IUseCaseFailPayload);
+    }
+  });
 }
 
 export function createUser(
   req: Request<{}, {}, IPostUserRequestBody>,
-  res: Response<IPostUserResponseBody | IFailResponseBody>
+  res: Response<IPostUserResponseBody | IUseCaseFailPayload>
 ) {
   return createUserUseCase
     .execute(req.body)
-    .then((id) => res.status(201).send({ id }))
-    .catch((error) =>
-      res.status(500).send({ error, message: "Internal Server Error" })
+    .then((useCaseResponse) =>
+      useCaseResponse.kind === UseCaseResponseKind.SUCESS
+        ? res
+            .status(201)
+            .send({
+              id: useCaseResponse.payload as IPostUserResponseBody["id"],
+            })
+        : res.status(500).send(useCaseResponse.payload as IUseCaseFailPayload)
     );
 }
 
 export function updateUser(
   req: Request<IPutUserRequestParams, {}, IPutUserRequestBody>,
-  res: Response<IPutUserResponseBody | IFailResponseBody>
+  res: Response<IPutUserResponseBody | IUseCaseFailPayload>
 ) {
   return updateUserUseCase
     .execute({ id: req.params.id, ...req.body })
-    .then((id) => res.status(200).send({ id }))
-    .catch((error) =>
-      res.status(500).send({ error, message: "Internal Server Error" })
+    .then((useCaseResponse) =>
+      useCaseResponse.kind === UseCaseResponseKind.SUCESS
+        ? res
+            .status(200)
+            .send({
+              user: useCaseResponse.payload as IPutUserResponseBody["user"],
+            })
+        : res.status(500).send(useCaseResponse.payload as IUseCaseFailPayload)
     );
 }
 
 export function deleteUser(
   req: Request<IDelUserRequestParams>,
-  res: Response<IDelUserResponseBody | IFailResponseBody>
+  res: Response<IDelUserResponseBody | IUseCaseFailPayload>
 ) {
   return deleteUserUseCase
     .execute(req.params)
-    .then((id) => res.status(200).send({ id }))
-    .catch((error) =>
-      res.status(500).send({ error, message: "Internal server error" })
+    .then((useCaseResponse) =>
+      useCaseResponse.kind === UseCaseResponseKind.SUCESS
+        ? res
+            .status(200)
+            .send({ id: useCaseResponse.payload as IDelUserResponseBody["id"] })
+        : res.status(500).send(useCaseResponse.payload as IUseCaseFailPayload)
     );
 }

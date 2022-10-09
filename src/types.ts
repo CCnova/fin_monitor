@@ -21,9 +21,6 @@ export interface IUseCaseResponse<TPayload> {
   payload: TPayload | IUseCaseFailPayload;
 }
 
-export type UseCase<
-  TPayload = IUseCaseFailPayload,
-  TArgs = undefined
-> = TArgs extends undefined
+export type UseCase<TPayload, TArgs = undefined> = TArgs extends undefined
   ? IWithoutArgsUseCase<IUseCaseResponse<TPayload>>
   : IWithArgsUseCase<IUseCaseResponse<TPayload>, TArgs>;

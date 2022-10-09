@@ -1,11 +1,6 @@
 import { User } from "@prisma/client";
 import { IUseCaseFailPayload, UseCase, UseCaseResponseKind } from "../../types";
-import {
-  isNumber,
-  isOfType,
-  runValidations,
-  ValidationFunction,
-} from "../../utils";
+import { isNumber, runValidations, ValidationFunction } from "../../utils";
 import { IGetUserRequestParams, UserFetcher } from "../types";
 
 const isValidId: ValidationFunction<IGetUserRequestParams> = (
@@ -22,12 +17,12 @@ const isValidId: ValidationFunction<IGetUserRequestParams> = (
 
 const validations = [isValidId];
 
-const validateParams = (params: IGetUserRequestParams): Promise<unknown[]> => {
+const validateParams = (params: IGetUserRequestParams) => {
   return runValidations(params, validations);
 };
 
 const generatePayload = (data: User | Error | null) => {
-  if (isOfType<Error>(data)) return { error: data, message: data.message };
+  if (data instanceof Error) return { error: data, message: data.message };
 
   return data;
 };

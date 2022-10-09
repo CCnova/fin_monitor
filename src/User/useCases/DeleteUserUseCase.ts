@@ -33,19 +33,19 @@ const validateParams = (params: IDelUserRequestParams): Promise<unknown[]> =>
 const formatToResponse = (
   kind: UseCaseResponseKind,
   payloadData: User | Error
-) => ({
-  kind,
-  payload: isOfType<User>(payloadData)
-    ? { id: payloadData.id }
-    : { error: payloadData, message: payloadData.message },
-});
+) => {
+  console.log({ payloadData });
+  return {
+    kind,
+    payload: isOfType<User>(payloadData)
+      ? payloadData.id
+      : { error: payloadData, message: payloadData.message },
+  };
+};
 
 export default function generator(
   deleteUser: UserDeleter
-): UseCase<
-  IDeleteUserUseCasePayload | IUseCaseFailPayload,
-  IDelUserRequestParams
-> {
+): UseCase<number | IUseCaseFailPayload, IDelUserRequestParams> {
   return {
     execute: (params) => {
       return validateParams(params)

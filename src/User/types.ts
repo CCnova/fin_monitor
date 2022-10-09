@@ -38,7 +38,7 @@ export interface IPutUserRequestBody {
 }
 
 export interface IPutUserResponseBody {
-  id: number;
+  user: User;
 }
 
 export interface IDelUserRequestParams {

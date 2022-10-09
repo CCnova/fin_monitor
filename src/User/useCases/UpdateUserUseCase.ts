@@ -14,10 +14,6 @@ import {
   UserUpdater,
 } from "../types";
 
-interface IUpdateUserUseCasePayload {
-  id: number;
-}
-
 const validateId: ValidationFunction<
   IPutUserRequestBody & IPutUserRequestParams
 > = (params, validAction, notValidAction) => {
@@ -52,17 +48,19 @@ const validateParams = (
 const formatToResponse = (
   kind: UseCaseResponseKind,
   payloadData: User | Error
-) => ({
-  kind,
-  payload: isOfType<User>(payloadData)
-    ? payloadData
-    : { error: payloadData, message: payloadData.message },
-});
+) => {
+  return {
+    kind,
+    payload: isOfType<User>(payloadData)
+      ? payloadData
+      : { error: payloadData, message: payloadData.message },
+  };
+};
 
 export default function generator(
   updateUser: UserUpdater
 ): UseCase<
-  IUpdateUserUseCasePayload | IUseCaseFailPayload,
+  User | IUseCaseFailPayload,
   IPutUserRequestBody & IPutUserRequestParams
 > {
   return {
