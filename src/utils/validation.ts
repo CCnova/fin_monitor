@@ -11,6 +11,10 @@ export const isNumber = (value: number | string) => !isNaN(Number(value));
 
 export const isTruthy = (value: any) => Boolean(value) == true;
 
+export const isPositive = (value: number) => value > 0;
+
+export const isZero = (value: number) => value === 0;
+
 export const runValidations = <T>(
   toValidate: T,
   validations: ValidationFunction<T>[]

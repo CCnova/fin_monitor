@@ -1,16 +1,23 @@
 import { Request, Response } from "express";
 import { IUseCaseFailPayload, UseCaseResponseKind } from "../types";
 import {
+  DeleteAccountRequestParams,
+  DeleteAccountResponseBody,
   GetAccountRequestParams,
   GetAccountResponseBody,
   ListAccountsResponseBody,
   PostAccountRequestBody,
   PostAccountResponseBody,
+  PutAccountRequestBody,
+  PutAccountRequestParams,
+  PutAccountResponseBody,
 } from "./types";
 import {
   createAccountUseCase,
+  deleteAccountUseCase,
   getAccountUseCase,
   listAccountsUseCase,
+  updateAccountUseCase,
 } from "./useCases";
 
 export function getAccount(
@@ -20,12 +27,9 @@ export function getAccount(
   return getAccountUseCase.execute(req.params).then((useCaseResponse) => {
     switch (useCaseResponse.kind) {
       case UseCaseResponseKind.SUCESS:
-        return res
-          .status(200)
-          .send({
-            account:
-              useCaseResponse.payload as GetAccountResponseBody["account"],
-          });
+        return res.status(200).send({
+          account: useCaseResponse.payload as GetAccountResponseBody["account"],
+        });
       case UseCaseResponseKind.NOT_FOUND:
         return res.status(200).send({ account: null });
       case UseCaseResponseKind.FAIL:
@@ -61,4 +65,48 @@ export function listAccounts(
         })
       : res.status(500).send(useCaseResponse.payload as IUseCaseFailPayload)
   );
+}
+
+export function updateAccount(
+  req: Request<PutAccountRequestParams, {}, PutAccountRequestBody>,
+  res: Response<PutAccountResponseBody | IUseCaseFailPayload>
+) {
+  return updateAccountUseCase
+    .execute({ ...req.params, ...req.body })
+    .then((useCaseResponse) => {
+      switch (useCaseResponse.kind) {
+        case UseCaseResponseKind.SUCESS:
+          return res.status(200).send({
+            account: useCaseResponse.payload,
+          } as PutAccountResponseBody);
+        case UseCaseResponseKind.NOT_FOUND:
+          return res.status(401).send({ account: null });
+        case UseCaseResponseKind.FAIL:
+          return res
+            .status(500)
+            .send(useCaseResponse.payload as IUseCaseFailPayload);
+      }
+    });
+}
+
+export function deleteAccount(
+  req: Request<DeleteAccountRequestParams>,
+  res: Response<DeleteAccountResponseBody>
+) {
+  return deleteAccountUseCase.execute(req.params).then((useCaseResponse) => {
+    switch (useCaseResponse.kind) {
+      case UseCaseResponseKind.SUCESS:
+        return res
+          .status(200)
+          .send({
+            account: useCaseResponse.payload,
+          } as DeleteAccountResponseBody);
+      case UseCaseResponseKind.NOT_FOUND:
+        return res.status(401).send({ account: null });
+      case UseCaseResponseKind.FAIL:
+        return res
+          .status(500)
+          .send(useCaseResponse.payload as DeleteAccountResponseBody);
+    }
+  });
 }
